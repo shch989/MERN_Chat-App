@@ -1,5 +1,5 @@
 import React, { Fragment, useEffect, useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { toast, ToastContainer } from 'react-toastify'
 import axios from 'axios'
 import { registerRoute } from '../utils/APIRoutes'
@@ -9,6 +9,7 @@ import Logo from '../assets/logo192.png'
 import 'react-toastify/dist/ReactToastify.css'
 
 function Register() {
+  const navigate = useNavigate()
   const [values, setValues] = useState({
     usename: '',
     email: '',
@@ -23,16 +24,29 @@ function Register() {
     draggable: true,
     theme: 'dark',
   }
+
+  // 로컬스토리지에 회원정보가 저장될 경우 로그인 페이지 이동시 자동으로 메인페이지로 이동
+  useEffect(() => {
+    if (localStorage.getItem('chat-app-user')) {
+      navigate('/')
+    }
+  }, [])
+
   const handlerSubmit = async (event) => {
     event.preventDefault()
-    if(handleVaildation()) {
-      const { password, confirmPassword, username, email } = values;
+    if (handleVaildation()) {
+      const { password, username, email } = values
       const { data } = await axios.post(registerRoute, {
         username,
         email,
-        password
+        password,
       })
-
+      if (data.status === false) {
+        return toast.error(data.message, toastOptions)
+      }
+      if (data.status === true) {
+        navigate('/login')
+      }
     }
   }
 
@@ -47,11 +61,11 @@ function Register() {
     } else if (password.length < 8) {
       toast.error('비밀번호는 8자 이상으로 해야합니다.', toastOptions)
       return false
-    } else if (email === "") {
+    } else if (email === '') {
       toast.error('이메일을 작성란이 비어있습니다.', toastOptions)
       return false
     }
-    return true;
+    return true
   }
   const handlerChange = (event) => {
     setValues({ ...values, [event.target.name]: event.target.value })
