@@ -2,7 +2,7 @@ import React, { Fragment, useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { toast, ToastContainer } from 'react-toastify'
 import axios from 'axios'
-import { SetAvatarRouter } from '../utils/APIRoutes'
+import { setAvatarRoute } from '../utils/APIRoutes'
 import loader from '../assets/loader.gif'
 import styled from 'styled-components'
 import { Buffer } from 'buffer'
@@ -23,10 +23,30 @@ function SetAvatar() {
     draggable: true,
     theme: 'dark',
   }
+
+  useEffect(async() => {
+    if(!localStorage.getItem("chat-app-user")) {
+      navigate("/login")
+    }
+  }, [])
+
   const setProfilePicture = async () => {
-    if(selectedAvatar === undefined) {
-      toast.error("프로필 아바타를 지정해주세요.", toastOptions)
-      return;
+    if (selectedAvatar === undefined) {
+      toast.error('프로필 아바타를 지정해주세요.', toastOptions)
+      return
+    } else {
+      const user = await JSON.parse(localStorage.getItem('chat-app-user'))
+      const { data } = await axios.post(`${setAvatarRoute}/${user._id}`, {
+        image: avatars[selectedAvatar],
+      })
+      if(data.isSet) {
+        user.isAvatarImageSet = true;
+        user.avatarImage = data.image;
+        localStorage.setItem("chat-app-user", JSON.stringify(user))
+        navigate('/')
+      } else {
+        toast.error('에러가 발생하였습니다. 다시 시도해보십시오', toastOptions)
+      }
     }
   }
   useEffect(async () => {
@@ -44,28 +64,36 @@ function SetAvatar() {
 
   return (
     <Fragment>
-      <Container>
-        <div className="title-container">
-          <h1>당신의 아바타 프로필을 선택하세요.</h1>
-        </div>
-        <div className="avatars">
-          {avatars.map((avatar, index) => (
-            <div
-              key={index}
-              className={`avatar ${selectedAvatar === index ? 'selected' : ''}`}
-            >
-              <img
-                src={`data:image/svg+xml;base64,${avatar}`}
-                alt="avatar"
-                onClick={() => setSelectedAvatar(index)}
-              />
-            </div>
-          ))}
-        </div>
-        <button className="submit-btn" onSubmit={setProfilePicture}>
-          프로필 아바타로 지정
-        </button>
-      </Container>
+      {isLoading ? (
+        <Container>
+          <img src={loader} alt="loader" className="loader" />
+        </Container>
+      ) : (
+        <Container>
+          <div className="title-container">
+            <h1>당신의 아바타 프로필을 선택하세요.</h1>
+          </div>
+          <div className="avatars">
+            {avatars.map((avatar, index) => (
+              <div
+                key={index}
+                className={`avatar ${
+                  selectedAvatar === index ? 'selected' : ''
+                }`}
+              >
+                <img
+                  src={`data:image/svg+xml;base64,${avatar}`}
+                  alt="avatar"
+                  onClick={() => setSelectedAvatar(index)}
+                />
+              </div>
+            ))}
+          </div>
+          <button className="submit-btn" onClick={setProfilePicture}>
+            프로필 아바타로 지정
+          </button>
+        </Container>
+      )}
       <ToastContainer />
     </Fragment>
   )
